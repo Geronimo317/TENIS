@@ -128,7 +128,7 @@ with tab_rosters:
         st.subheader("Agregar Equipo")
         with st.form(key=f"new_team_form_{st.session_state.registration_form_key}"):
             team_name = st.text_input("Nombre del Equipo")
-            team_group = st.text_input("Grupo (ej: A, B)", "A")
+            team_group = st.text_input("Grupo (ej: A, B)")
             team_players = st.text_area("Jugadores (separados por comas)")
             if st.form_submit_button("Registrar Equipo"):
                 if cat_data is not None and team_name and team_players:
