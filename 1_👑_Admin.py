@@ -42,7 +42,6 @@ with st.sidebar.expander("Gestionar Torneo y Categorías", expanded=False):
     # This button allows the user to clear the session and start over.
     if st.button("✨ Iniciar Torneo Nuevo", use_container_width=True):
         st.session_state.data = {}
-        st.session_state.current_category = None # Clear selected category
         st.success("Nuevo torneo iniciado.")
         time.sleep(1)
         st.rerun()
