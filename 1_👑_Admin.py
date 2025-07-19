@@ -53,42 +53,32 @@ with st.sidebar.expander("Gestionar Categorías"):
                 st.success(message); st.rerun()
     else: st.info("No hay categorías para eliminar.")
     
-with st.sidebar.expander("Cargar / Descargar Torneo"):
-    st.subheader("Cargar Torneo desde Archivo")
+with st.sidebar.expander("Cargar / Guardar Torneo"):
+    st.subheader("Cargar Torneo (subir .json)")
     uploaded_file = st.file_uploader(
-        "Selecciona un archivo .json de torneo",
-        type=['json'],
-        label_visibility="collapsed"
-    )
+        "Selecciona un archivo .json de torneo", type=['json'], label_visibility="collapsed")
 
     if uploaded_file is not None:
         try:
-            # Read the uploaded file's content
             string_data = uploaded_file.getvalue().decode("utf-8")
             new_data = json.loads(string_data)
-
-            # Replace the session data and save it
             st.session_state.data = new_data
             save_and_reload()
-
             st.success("¡Torneo cargado con éxito!")
-            # Use a small delay before rerunning to allow the user to see the message
-            time.sleep(1)
-            st.rerun()
+            time.sleep(1); st.rerun()
         except Exception as e:
             st.error(f"Error al procesar el archivo: {e}")
 
-    # The global export button is now logically placed here
-    st.sidebar.subheader("Descargar Torneo Completo")
-    any_champion_exists = any(cat.get('champion') for cat in st.session_state.data.values())
-    if any_champion_exists:
-        excel_data = logic.export_all_finished_to_excel(st.session_state.data)
-        if excel_data:
-            st.sidebar.download_button(
-                label="📥 Descargar Resumen Final (.xlsx)", data=excel_data, file_name="Resultados_Finales_Torneo.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-    else:
-        st.sidebar.info("El botón para exportar aparecerá aquí cuando haya un campeón.")
+    st.subheader("Guardar y Descargar Torneo (.json)")
+    # Convert current tournament data to a JSON string for the download button
+    json_string = json.dumps(st.session_state.data, indent=4)
+    st.download_button(
+        label="📥 Guardar y Descargar Archivo",
+        data=json_string,
+        file_name="team_tournament_data.json",
+        mime="application/json",
+        use_container_width=True
+    )
 
 
 # --- Main Page Content ---
