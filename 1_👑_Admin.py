@@ -46,8 +46,7 @@ with st.sidebar.expander("Gestionar Torneo y Categorías", expanded=True):
         st.success("Nuevo torneo iniciado.")
         time.sleep(1)
         st.rerun()
-
-    st.markdown("---")
+        
     st.subheader("Crear Nueva Categoría")
     new_cat_name = st.text_input("Nombre", key="new_cat_name_input", label_visibility="collapsed").strip().upper()
     if st.button("Crear Categoría"):
