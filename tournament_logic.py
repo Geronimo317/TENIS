@@ -53,17 +53,37 @@ def register_team(cat_data, name, group, players_str):
 
 
 def parse_match_result(result_line):
-    match = re.match(r"(.+?) def\. (.+?) (.+)", result_line)
-    if not match: raise ValueError("Formato invalido (ej: Alice def. Bob 6-4 6-3)")
-    p1, p2, score = match.groups()
+    """
+    Parses a match result string, correctly handling multi-word names.
+    e.g., "Vale Tejeda def. Meli Sanchez 6-4 6-4"
+    """
+    # This regex looks for:
+    # (.+?)   - Group 1: One or more characters (non-greedy) for Player 1
+    # \s+def\.\s+ - The literal " def. " with surrounding spaces
+    # (.+?)   - Group 2: One or more characters (non-greedy) for Player 2
+    # \s+     - A space before the score
+    # ((\d+-\d+\s*)+) - Group 3: The entire score string (e.g., "6-4 6-4")
+    match = re.match(r"(.+?)\s+def\.\s+(.+?)\s+((\d+-\d+\s*)+)", result_line.strip())
+    
+    if not match:
+        raise ValueError("Formato de resultado inválido. Use: 'Jugador A def. Jugador B 6-4 6-2'")
+
+    p1, p2, score, _ = match.groups()
+    score = score.strip()
+    
     p1_sets, p2_sets, p1_games, p2_games, set_scores = 0, 0, 0, 0, []
     for s in score.split():
-        g1, g2 = map(int, s.split("-")); set_scores.append(f"{g1}-{g2}")
-        if g1 > g2: p1_sets += 1
-        else: p2_sets += 1
-        p1_games += g1; p2_games += g2
-    return p1.strip(), p2.strip(), p1_sets, p2_sets, p1_games, p2_games, " ".join(set_scores)
+        try:
+            g1, g2 = map(int, s.split("-"))
+            set_scores.append(f"{g1}-{g2}")
+            if g1 > g2: p1_sets += 1
+            else: p2_sets += 1
+            p1_games += g1; p2_games += g2
+        except ValueError:
+            # Handle cases where the score might be malformed
+            raise ValueError(f"Formato de set inválido: '{s}'. Use el formato '6-4'.")
 
+    return p1.strip(), p2.strip(), p1_sets, p2_sets, p1_games, p2_games, " ".join(set_scores)
 
 def identify_team(player, teams):
     names = [n.strip().lower() for n in player.split("/")]
