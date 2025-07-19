@@ -36,22 +36,43 @@ elif 'current_category' in st.session_state and st.session_state.current_categor
 
 st.sidebar.selectbox("Selecciona una Categoría", options=categories, key='current_category', index=index)
 
-with st.sidebar.expander("Gestionar Categorías"):
+# In 1_👑_Admin.py, replace the "Gestionar Categorías" expander in the sidebar
+
+with st.sidebar.expander("Gestionar Torneo y Categorías", expanded=True):
+    # This button allows the user to clear the session and start over.
+    if st.button("✨ Iniciar Torneo Nuevo", use_container_width=True):
+        st.session_state.data = {}
+        st.session_state.current_category = None # Clear selected category
+        st.success("Nuevo torneo iniciado.")
+        time.sleep(1)
+        st.rerun()
+
+    st.markdown("---")
     st.subheader("Crear Nueva Categoría")
     new_cat_name = st.text_input("Nombre", key="new_cat_name_input", label_visibility="collapsed").strip().upper()
     if st.button("Crear Categoría"):
-        if new_cat_name and new_cat_name not in categories:
-            logic.initialize_category(st.session_state.data, new_cat_name); save_and_reload()
-            st.session_state.newly_created_category = new_cat_name; st.rerun()
-        else: st.warning("Nombre vacío o ya existente.")
+        if not st.session_state.data:
+            st.session_state.data = {} # Ensure data dict exists if starting from empty
+        if new_cat_name:
+            logic.initialize_category(st.session_state.data, new_cat_name)
+            st.session_state.newly_created_category = new_cat_name
+            st.rerun()
+        else:
+            st.warning("El nombre de la categoría no puede estar vacío.")
+
     st.subheader("Eliminar Categoría")
     if categories:
         cat_to_delete = st.selectbox("Selecciona Categoría", options=[""] + categories, key="delete_cat_select", label_visibility="collapsed")
         if cat_to_delete:
             if st.button(f"Eliminar '{cat_to_delete}'", type="primary"):
-                message = logic.delete_category(st.session_state.data, cat_to_delete); save_and_reload()
-                st.success(message); st.rerun()
-    else: st.info("No hay categorías para eliminar.")
+                message = logic.delete_category(st.session_state.data, cat_to_delete)
+                # Ensure we select a valid category after deletion
+                if st.session_state.current_category == cat_to_delete:
+                    st.session_state.current_category = categories[0] if len(categories) > 1 else None
+                st.success(message)
+                st.rerun()
+    else:
+        st.info("No hay categorías para eliminar.")
     
 with st.sidebar.expander("Cargar / Guardar Torneo"):
     st.subheader("Cargar Torneo (subir .json)")

@@ -12,10 +12,14 @@ import io
 DATA_FILE = "team_tournament_data.json"
 
 # --- Data Handling and Core Logic (No changes in this section) ---
+# In tournament_logic.py, replace the load_data function
+
 def load_data():
-    try:
-        with open(DATA_FILE, 'r') as f: return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError): return {}
+    """
+    This function is now designed to always start the session fresh.
+    The local JSON file will only be used for manual user uploads/downloads.
+    """
+    return {}
     
     
 def save_data(data):
