@@ -238,7 +238,26 @@ with tab_knockout:
                 for m in reversed(ko_matches[-4:]):
                     st.markdown(f"**{m['p1']}** def. **{m['p2']}** ({m['set_scores']})<br>_({m['team1']} vs {m['team2']})_", unsafe_allow_html=True)
 
-    else: # This block only runs if the knockout has not started yet
+    st.markdown("---")
+    st.subheader("Acciones Pendientes de la Ronda")
+        
+    current_round = cat_data.get('knockout', [])[-1]
+    pending_action_found = False
+    for team_a, team_b in current_round:
+        # Check if this match is a BYE and is not yet decided/advanced
+        if "BYE" in (team_a, team_b) and not logic._get_ko_final_winner(cat_data, team_a, team_b):
+            advancing_team = team_a if team_b == "BYE" else team_b
+            if st.button(f"Confirmar Avance de '{advancing_team}' por BYE"):
+                logic.trigger_round_check(cat_data)
+                save_and_reload()
+                st.rerun()
+            pending_action_found = True
+        
+    if not pending_action_found:
+        st.info("No hay BYEs pendientes en esta ronda. Registre los partidos para avanzar.")
+
+
+    elif not is_finished:
         st.info("La fase de grupos ha terminado. Genera el cuadro para continuar.")
         with st.form("generate_knockout_form"):
             c1, c2 = st.columns(2)
