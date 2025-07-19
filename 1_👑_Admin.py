@@ -4,7 +4,8 @@ import streamlit as st
 import pandas as pd
 from collections import defaultdict
 import tournament_logic as logic
-
+import json
+import time
 
 # --- Page Configuration ---
 st.set_page_config(page_title="Admin Panel", page_icon="👑", layout="wide")
@@ -34,6 +35,7 @@ elif 'current_category' in st.session_state and st.session_state.current_categor
     index = categories.index(st.session_state.current_category)
 
 st.sidebar.selectbox("Selecciona una Categoría", options=categories, key='current_category', index=index)
+
 with st.sidebar.expander("Gestionar Categorías"):
     st.subheader("Crear Nueva Categoría")
     new_cat_name = st.text_input("Nombre", key="new_cat_name_input", label_visibility="collapsed").strip().upper()
@@ -51,7 +53,44 @@ with st.sidebar.expander("Gestionar Categorías"):
                 st.success(message); st.rerun()
     else: st.info("No hay categorías para eliminar.")
     
-    
+with st.sidebar.expander("Cargar / Descargar Torneo"):
+    st.subheader("Cargar Torneo desde Archivo")
+    uploaded_file = st.file_uploader(
+        "Selecciona un archivo .json de torneo",
+        type=['json'],
+        label_visibility="collapsed"
+    )
+
+    if uploaded_file is not None:
+        try:
+            # Read the uploaded file's content
+            string_data = uploaded_file.getvalue().decode("utf-8")
+            new_data = json.loads(string_data)
+
+            # Replace the session data and save it
+            st.session_state.data = new_data
+            save_and_reload()
+
+            st.success("¡Torneo cargado con éxito!")
+            # Use a small delay before rerunning to allow the user to see the message
+            time.sleep(1)
+            st.rerun()
+        except Exception as e:
+            st.error(f"Error al procesar el archivo: {e}")
+
+    # The global export button is now logically placed here
+    st.sidebar.subheader("Descargar Torneo Completo")
+    any_champion_exists = any(cat.get('champion') for cat in st.session_state.data.values())
+    if any_champion_exists:
+        excel_data = logic.export_all_finished_to_excel(st.session_state.data)
+        if excel_data:
+            st.sidebar.download_button(
+                label="📥 Descargar Resumen Final (.xlsx)", data=excel_data, file_name="Resultados_Finales_Torneo.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+    else:
+        st.sidebar.info("El botón para exportar aparecerá aquí cuando haya un campeón.")
+
+
 # --- Main Page Content ---
 st.title("👑 Panel de Administración")
 cat_data = get_current_category_data()
