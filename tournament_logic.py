@@ -12,14 +12,10 @@ import io
 DATA_FILE = "team_tournament_data.json"
 
 # --- Data Handling and Core Logic (No changes in this section) ---
-# In tournament_logic.py, replace the load_data function
-
 def load_data():
-    """
-    This function is now designed to always start the session fresh.
-    The local JSON file will only be used for manual user uploads/downloads.
-    """
-    return {}
+    try:
+        with open(DATA_FILE, 'r') as f: return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError): return {}
     
     
 def save_data(data):
@@ -142,13 +138,6 @@ def _check_and_generate_next_round(cat_data):
             next_round = [(winners_this_round[i], winners_this_round[i+1] if i+1 < len(winners_this_round) else "BYE") for i in range(0, len(winners_this_round), 2)]
             cat_data['knockout'].append(next_round)
             
-def trigger_round_check(cat_data):
-    """
-    A simple trigger function that can be called from the UI to check 
-    if a round is complete and a new one should be generated.
-    """
-    _check_and_generate_next_round(cat_data)
-    return "Revisión de ronda completada."
             
 def record_knockout_match(cat_data, result_line):
     p1, p2, s1, s2, g1, g2, set_scores = parse_match_result(result_line)
@@ -167,51 +156,37 @@ def record_knockout_match(cat_data, result_line):
     return f"Partido de eliminatoria registrado: {winner_team} gana."
 
 
-# In tournament_logic.py, replace the generate_knockout_bracket function with this new version.
-
 def generate_knockout_bracket(cat_data, num_advancing, bracket_size):
-    """
-    Generates a knockout bracket by ranking all qualifiers globally,
-    assigning BYEs to the top-ranked teams, and seeding #1 vs #N, #2 vs #N-1, etc.
-    """
-    teams_data = cat_data.get('teams', {})
-    if not teams_data:
-        raise ValueError("No hay equipos para generar una eliminatoria.")
-
-    # Step 1: Get all qualifying teams with their full stats
-    qualifiers_with_stats = []
-    groups = defaultdict(list)
-    for team, d in teams_data.items():
-        groups[d['group']].append((team, d))
     
-    for group, group_teams in sorted(groups.items()):
-        # Sort teams within their group first
-        sorted_teams = sorted(group_teams, key=lambda kv: (kv[1]['team_matches_won'], kv[1]['individual_matches_won'], kv[1]['sets_won'] - kv[1]['sets_lost'], kv[1]['games_won'] - kv[1]['games_lost']), reverse=True)
-        # Add the top N advancing teams to our list
-        qualifiers_with_stats.extend(sorted_teams[:num_advancing])
-
-    # Step 2: Perform a global sort of all qualifiers to find the best teams
-    # The sort key is the same as the group sort key
-    globally_sorted_qualifiers = sorted(qualifiers_with_stats, key=lambda kv: (kv[1]['team_matches_won'], kv[1]['individual_matches_won'], kv[1]['sets_won'] - kv[1]['sets_lost'], kv[1]['games_won'] - kv[1]['games_lost']), reverse=True)
-
-    # Step 3: Create a seeded list and pad with BYEs at the end
-    seeded_list = [team[0] for team in globally_sorted_qualifiers]
-    while len(seeded_list) < bracket_size:
-        seeded_list.append("BYE")
-        
-    # Step 4: Create matchups by pairing top half with bottom half (e.g., 1v8, 2v7...)
-    matchups = []
-    top_half = seeded_list[:bracket_size // 2]
-    bottom_half = seeded_list[bracket_size // 2:]
-    bottom_half.reverse() # Reverse to get #1 vs #N pairing
-
-    for i in range(len(top_half)):
-        matchups.append((top_half[i], bottom_half[i]))
-
-    cat_data['knockout'] = [matchups]
-    cat_data['knockout_individual_matches'] = []
+    """Generates a knockout bracket based on the current category data."""
+    
+    if num_advancing != 2:
+        groups = defaultdict(list); [groups[d['group']].append((team, d)) for team, d in cat_data['teams'].items()]
+        qualifiers = []
+        for group, group_teams in sorted(groups.items()):
+            sorted_teams = sorted(group_teams, key=lambda kv: (kv[1]['team_matches_won'], kv[1]['individual_matches_won'], kv[1]['sets_won'] - kv[1]['sets_lost'], kv[1]['games_won'] - kv[1]['games_lost']), reverse=True)
+            qualifiers.extend([t[0] for t in sorted_teams[:num_advancing]])
+        while len(qualifiers) < bracket_size: qualifiers.append("BYE")
+        random.shuffle(qualifiers); matchups = [(qualifiers[i], qualifiers[i+1]) for i in range(0, bracket_size, 2)]
+    else:
+        first_place_pot, second_place_pot = [], []
+        groups = defaultdict(list); [groups[d['group']].append((team, d)) for team, d in cat_data['teams'].items()]
+        for group, group_teams in sorted(groups.items()):
+            sorted_teams = sorted(group_teams, key=lambda kv: (kv[1]['team_matches_won'], kv[1]['individual_matches_won'], kv[1]['sets_won'] - kv[1]['sets_lost'], kv[1]['games_won'] - kv[1]['games_lost']), reverse=True)
+            if len(sorted_teams) > 0: first_place_pot.append({'name': sorted_teams[0][0], 'group': group})
+            if len(sorted_teams) > 1: second_place_pot.append({'name': sorted_teams[1][0], 'group': group})
+        while len(first_place_pot) + len(second_place_pot) < bracket_size:
+            second_place_pot.append({'name': "BYE", 'group': "BYE_GROUP"})
+        random.shuffle(first_place_pot); random.shuffle(second_place_pot)
+        matchups, available_seconds = [], list(second_place_pot)
+        for first_team in first_place_pot:
+            best_partner = next((p for p in available_seconds if first_team['group'] != p['group']), None)
+            if best_partner is None and available_seconds: best_partner = available_seconds[0]
+            if best_partner:
+                matchups.append((first_team['name'], best_partner['name'])); available_seconds.remove(best_partner)
+    cat_data['knockout'] = [matchups]; cat_data['knockout_individual_matches'] = []
     cat_data.pop('champion', None)
-    return f"Eliminatoria de {bracket_size} generada con cabezas de serie."
+    return f"Eliminatoria de {bracket_size} generada."
 
 
 def generate_bracket_image(cat_data):
