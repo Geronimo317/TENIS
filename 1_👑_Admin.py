@@ -38,7 +38,7 @@ st.sidebar.selectbox("Selecciona una Categoría", options=categories, key='curre
 
 # In 1_👑_Admin.py, replace the "Gestionar Categorías" expander in the sidebar
 
-with st.sidebar.expander("Gestionar Torneo y Categorías", expanded=True):
+with st.sidebar.expander("Gestionar Torneo y Categorías", expanded=False):
     # This button allows the user to clear the session and start over.
     if st.button("✨ Iniciar Torneo Nuevo", use_container_width=True):
         st.session_state.data = {}
